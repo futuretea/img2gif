@@ -1,4 +1,5 @@
 all: build
+.PHONY: init vendor build linux windows test clean
 init:
 	go mod init img2gif
 vendor:

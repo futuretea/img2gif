@@ -52,20 +52,20 @@ func init() {
 func getFiles(path string, name string) []string {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Could not open dir %s. Error: %s\n", path, err)
 	}
 	numArr := []int{}
 	for _, info := range files {
-		numstr :=  strings.TrimSuffix(strings.TrimPrefix(info.Name(), name), ".png")
+		numstr := strings.TrimSuffix(strings.TrimPrefix(info.Name(), name), ".png")
 		num, err := strconv.Atoi(numstr)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Could not read image name %s. Error: %s\n", info.Name(), err)
 		}
 		numArr = append(numArr, num)
 	}
 	sort.Ints(numArr)
 	sortedFiles := []string{}
-	for _, num := range numArr{
+	for _, num := range numArr {
 		sortedFile := fmt.Sprintf("%s%d.png", name, num)
 		sortedFiles = append(sortedFiles, sortedFile)
 	}
@@ -82,14 +82,14 @@ func decodeImage(file string) image.Image {
 		fpath = path + "\\" + file
 	}
 	f, err := os.Open(fpath)
-	fmt.Println(f.Name())
 	if err != nil {
 		log.Fatalf("Could not open file %s. Error: %s\n", file, err)
 	}
+	fmt.Println(f.Name())
 	defer f.Close()
 	img, err := png.Decode(f)
 	if err != nil {
-		log.Fatalf("Decode Error: %s\n", err)
+		log.Fatalf("Could not Decode file %s. Error: %s\n", f.Name(), err)
 	}
 	return img
 }
@@ -104,5 +104,8 @@ func addImage(img image.Image) {
 func outputGif(output string) {
 	f, _ := os.Create(output)
 	defer f.Close()
-	gif.EncodeAll(f, anim)
+	err := gif.EncodeAll(f, anim)
+	if err != nil {
+		log.Fatalf("Could not Encode gif %s. Error: %s\n", output, err)
+	}
 }
