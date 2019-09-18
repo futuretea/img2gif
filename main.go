@@ -22,32 +22,9 @@ var (
 	name   string
 	output string
 	delay  int
+	bound  int
 	anim   *gif.GIF
 )
-
-func main() {
-	files := getFiles(path, name)
-	for _, file := range files {
-		img := decodeImage(file)
-		addImage(img)
-	}
-	outputGif(output)
-}
-
-func init() {
-	flag.StringVar(&path, "p", "", "png图片文件夹路径")
-	flag.StringVar(&name, "n", "image", "png图片文件前缀")
-	flag.StringVar(&output, "o", "output.gif", "生成gif的文件名")
-	flag.IntVar(&delay, "d", 4, "每张图片的展示时间*15毫秒")
-	flag.Parse()
-
-	if path == "" {
-		fmt.Println("请输入图片路径")
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-	anim = new(gif.GIF)
-}
 
 func getFiles(path string, name string) []string {
 	files, err := ioutil.ReadDir(path)
@@ -72,6 +49,10 @@ func getFiles(path string, name string) []string {
 	return sortedFiles
 }
 
+func getBounds(files []string, bound int) image.Rectangle {
+	return decodeImage(files[bound-1]).Bounds()
+}
+
 func decodeImage(file string) image.Image {
 	sysType := runtime.GOOS
 	fpath := ""
@@ -85,7 +66,6 @@ func decodeImage(file string) image.Image {
 	if err != nil {
 		log.Fatalf("Could not open file %s. Error: %s\n", file, err)
 	}
-	fmt.Println(f.Name())
 	defer f.Close()
 	img, err := png.Decode(f)
 	if err != nil {
@@ -94,9 +74,10 @@ func decodeImage(file string) image.Image {
 	return img
 }
 
-func addImage(img image.Image) {
-	paletted := image.NewPaletted(img.Bounds(), palette.Plan9)
-	draw.FloydSteinberg.Draw(paletted, img.Bounds(), img, image.ZP)
+func addImage(img image.Image, bounds image.Rectangle) {
+	//bounds := img.Bounds()
+	paletted := image.NewPaletted(bounds, palette.Plan9)
+	draw.FloydSteinberg.Draw(paletted, bounds, img, image.ZP)
 	anim.Image = append(anim.Image, paletted)
 	anim.Delay = append(anim.Delay, delay*15)
 }
@@ -108,4 +89,32 @@ func outputGif(output string) {
 	if err != nil {
 		log.Fatalf("Could not Encode gif %s. Error: %s\n", output, err)
 	}
+}
+
+func init() {
+	flag.StringVar(&path, "p", "", "png图片文件夹路径")
+	flag.StringVar(&name, "n", "image", "png图片文件前缀")
+	flag.StringVar(&output, "o", "output.gif", "生成gif的文件名")
+	flag.IntVar(&delay, "d", 8, "每张图片的展示时间*15毫秒")
+	flag.IntVar(&bound, "b", 1, "gif边界参照")
+	flag.Parse()
+
+	if path == "" {
+		fmt.Println("请输入图片路径")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+	anim = new(gif.GIF)
+}
+
+func main() {
+	files := getFiles(path, name)
+	bounds := getBounds(files, bound)
+	fmt.Printf("gif边界: %d -> %d\n", bounds.Min, bounds.Max)
+	for _, file := range files {
+		img := decodeImage(file)
+		addImage(img, bounds)
+		fmt.Println(file)
+	}
+	outputGif(output)
 }
